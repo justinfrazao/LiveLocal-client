@@ -1,7 +1,10 @@
-import React, { useContext, useEffect, useState } from 'react';
-import { auth } from '../firebase';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendPasswordResetEmail, updateEmail, updatePassword, onAuthStateChanged } from 'firebase/auth';
+import app from '../firebase';
 
-const AuthContext = React.createContext();
+const AuthContext = createContext();
+
+const auth = getAuth(app);
 
 export const useAuth = () => {
   return useContext(AuthContext);
@@ -9,14 +12,36 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState();
+  const [loaded, setLoaded] = useState(false);
 
   const signup = (email, password) => {
-    auth.createUserWithEmailAndPassword(email, password);
+    return createUserWithEmailAndPassword(auth, email, password);
   };
 
+  const login = (email, password) => {
+    return signInWithEmailAndPassword(auth, email, password);
+  };
+
+  const logout = () => {
+    return signOut(auth);
+  };
+
+  const resetPassword = (email) => {
+    return sendPasswordResetEmail(auth, email);
+  }
+
+  const updateUserEmail = (email) => {
+    return updateEmail(currentUser, email);
+  }
+
+  const updateUserPassword = (password) => {
+    return updatePassword(currentUser, password);
+  }
+
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(user => {
+    const unsubscribe = onAuthStateChanged(auth, user => {
       setCurrentUser(user);
+      setLoaded(true);
     });
 
     return unsubscribe();
@@ -25,11 +50,16 @@ export const AuthProvider = ({ children }) => {
   const value = {
     currentUser,
     signup,
+    login,
+    logout,
+    resetPassword,
+    updateUserEmail,
+    updateUserPassword,
   };
 
   return (
     <AuthContext.Provider value={value}>
-      {children}
+      {loaded && children}
     </AuthContext.Provider>
   );
 };
